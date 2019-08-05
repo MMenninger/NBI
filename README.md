@@ -25,4 +25,4 @@ The **NBI** R package is being developed to clean up NBI data and make it easier
 
 ----
 
-This project is supported by Mazama Science.
+This project was adapted from Mazama Science. Supported by CMAP. 
