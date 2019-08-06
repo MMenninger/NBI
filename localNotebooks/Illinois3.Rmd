@@ -40,7 +40,7 @@ points(spTransform(nbisp, CRS("+init=epsg:5071")), pch = 17, cex = .05)
 title("Bridges in the Continental US")
 ```
   
-Nebraska is also an interesting case when it comes to the age of bridges in the state. In most states, the peak of bridge building was in the 60's or near that time. In contrast, Nebraska and Oklahoma built the most bridges in the 30's. For these reasons, we will be taking a closer look at bridges in Nebraska to explore their geography and history.
+Illinois is also an interesting case when it comes to the age of bridges in the state. In most states, the peak of bridge building was in the 60's or near that time. In contrast, Nebraska and Oklahoma built the most bridges in the 30's. For these reasons, we will be taking a closer look at bridges in Nebraska to explore their geography and history.
 
 ```{r conusModeBridgeAge}
 getmode <- function(v) {
