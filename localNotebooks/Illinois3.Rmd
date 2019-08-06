@@ -31,7 +31,7 @@ il$county <- getUSCounty(il$longitude, il$latitude, dataset = "ilCounties", stat
 
  What is so unique about Illinois?
 
-Nebraska is an interesting case for a couple of reasons. Bridges are not equally distributed throughout the country. There are a lot more bridges in the Eastern half. Fewer in the mountainous, less-developed west. Nebraska lies right in the middle of this divide, with a stark difference in the density of bridges in the eastern and western half of the state.  
+Illinois is an interesting case for a couple of reasons. Bridges are not equally distributed throughout the country. There are a lot more bridges in the Eastern half. Fewer in the mountainous, less-developed west. Nebraska lies right in the middle of this divide, with a stark difference in the density of bridges in the eastern and western half of the state.  
 
 ```{r conusBridges}
 plot(spTransform(conus, CRS("+init=epsg:5071")))
