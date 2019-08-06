@@ -6,16 +6,19 @@ output:
   html_document: default
   pdf_document: default
 ---
-  
+
 ```{r setup}
-source("S:/AdminGroups/PerformanceProgramming/RegionalTransportationPerformanceMeasures/Bridge_Analysis/NBI/R/convert2016.R")
-nbi <- convert2016("S:/AdminGroups/PerformanceProgramming/RegionalTransportationPerformanceMeasures/Bridge_Analysis/NBI/Data/2016hwybronlyonefile.zip")
+source("~/R/NBI/R/convert2016.R")
+nbi <- convert2016("~/R/NBI/Data/2016hwybronlyonefile.zip")
 library(MazamaSpatialUtils)
 library(sp)
 library(rgdal)
 library(purrr)
 library(animation)
-setSpatialDataDir("S:/AdminGroups/PerformanceProgramming/RegionalTransportationPerformanceMeasures/Bridge_Analysis/NBI/Data/Spatial")
+library(ggplot2)
+setSpatialDataDir("~/R/NBI/Data/Spatial")
+#MazamaSpatialUtils::convertUSCensusCounties()
+#MazamaSpatialUtils::convertUSCensusStates()
 loadSpatialData("USCensusCounties")
 loadSpatialData("USCensusStates")
 conus <- subset(USCensusStates, !stateCode %in% c("HI", "AK","GU","AS", "PR", "HI", "VI", "MP"))
@@ -31,7 +34,7 @@ il$county <- getUSCounty(il$longitude, il$latitude, dataset = "ilCounties", stat
 
  What is so unique about Illinois?
 
-Illinois is an interesting case for a couple of reasons. Bridges are not equally distributed throughout the country. There are a lot more bridges in the Eastern half. Fewer in the mountainous, less-developed west. Nebraska lies right in the middle of this divide, with a stark difference in the density of bridges in the eastern and western half of the state.  
+Illinois is an interesting case for a couple of reasons. Bridges are not equally distributed throughout the country. There are a lot more bridges in the Northeast of the state. Fewer in the less-developed south. 
 
 ```{r conusBridges}
 plot(spTransform(conus, CRS("+init=epsg:5071")))
@@ -40,7 +43,7 @@ points(spTransform(nbisp, CRS("+init=epsg:5071")), pch = 17, cex = .05)
 title("Bridges in the Continental US")
 ```
   
-Illinois is also an interesting case when it comes to the age of bridges in the state. In most states, the peak of bridge building was in the 60's or near that time. In contrast, Nebraska and Oklahoma built the most bridges in the 30's. For these reasons, we will be taking a closer look at bridges in Nebraska to explore their geography and history.
+In Illinois, like most states, the peak of bridge building was in the 60's or near that time. These bridges are now 60 years old, and many are nearing the end of their useful life. 
 
 ```{r conusModeBridgeAge}
 getmode <- function(v) {
@@ -64,7 +67,7 @@ title("Most Prolific Bridge-Building Decade")
 ```
 
     
-# Overall Distribution of Bridges in Nebraska
+# Overall Distribution of Bridges in Illinois
     
 ```{r USBridgeMap}
 plot(subset(conus, stateCode == "IL"))
@@ -74,6 +77,8 @@ title("All bridges in Illinois")
 legend("bottomleft", c("Bridges over water", "Bridges not over water"),
        pch = 17, col = c("blue", "red"), title = "Legend")
 ```
+
+
 
 ```{r CMAPBridgeMap}
 plot(subset(ilCounties, countyFIPS %in% c("031", "043", "089", "093", "097", "111", "197")))
@@ -87,7 +92,7 @@ legend("bottomleft", c("Bridges over water", "Bridges not over water"),
 
 We see two very different types of geography when we look at bridges that span water versus bridges that do not span water, like overpasses. Bridges that do not span water will generally only be on large roads and highways where an overpass or underpass is needed. Thus, these bridges directly follow the interstate.   
 
-On the other hand, bridges that do span water follow Nebraska's physical geography. In the western half of the state, the interstate generally follows the Platte river, but when it diverges in the east, we can easily follow the shape of the Platte as it curves up towards Omaha. Tributataries flow in from the north. In the southern part of the state, bridges outline the shape of the Republican river and its tributaries.  
+On the other hand, bridges that do span water follow Illinois's physical geography. 
 
 ```{r nebraskaMap}
 knitr::include_graphics("./localImages/Nebraska_ref_2001.jpg")
@@ -95,15 +100,31 @@ knitr::include_graphics("./localImages/Nebraska_ref_2001.jpg")
 
 
 
-Why are there so many more bridges in the Eastern half of the state? Western Nebraska is home to the Sandhills, arid and scantily populated. There are bridges where water and roads intersect and Eastern Nebraska is richer in both. However, many parts of Eastern Nebraska are relatively sparsely-populated farmland. Why, then, are there so many bridges? Let's zoom in a bit.
+Why are there so many more bridges in the Northeast of the state? Let's zoom in a bit.
 
-We are looking at a corner of Northeastern Nebraska. Now that we can make out individual bridges, we can see that they seem to be relatively evenly-spaced, following what must be rivers. If we take a look at a sattelite image of this same area, we see that, indeed, there are evenly spaced roads outlining the squares of each individual farming plot, which form nice regularly-spaced bridges where they intersect with rivers.  
-  
+
 # Bridge Age  
   
 ```{r yearBuiltHistogram}
 hist(il$yearBuilt, xlab = "Year Built", main = "Year Built", n = 100)
 ```
+
+```{r yearBuiltGgplot}
+
+ilBridges <- as.data.frame(il)
+
+ggplot(ilBridges,  aes(x=yearBuilt))+
+  geom_histogram(binwidth = 1) +
+  scale_x_continuous(breaks = seq(1870, 2020, 20), limits = c(1870, 2020))+
+  labs(x= "Year Built", y= "Number of Bridges", title= "Year Illinis Bridges Built")
+
+ggplot(ilBridges,  aes(x=yearBuilt, fill = county))+
+  geom_bar(position = "stack", show.legend = FALSE) +
+  scale_x_continuous(breaks = seq(1800, 2020, 20), limits = c(1880, 2020))+
+  labs(x= "Year Built", y= "Number of Bridges", title= "Year Illinois Bridges Built")
+```
+
+
 
 When were Nebraska's bridges built? It appears that close to half of them were built in one year in the 1930s. We will examine that phenomenon more in a minute. Ignoring that one outlier year, most bridges were built in the last 50 years or so. Previous to that, there are peaks every 5 to 10 years, which is most likely due to rounding in estimates of each bridge's founding year. Bridge building seems to start taking off around 1930, perhaps as part of depression-relief projects. There is the huge outlier of 1935, and then in the 40's, we see a dip again during the war. Besides 1935, most bridges were built in the last 50 years or so, with a peak in the early 60's, after the signing of the Federal Highway Act spurred road building, with a decline in bridge building since around 1990.  
   
