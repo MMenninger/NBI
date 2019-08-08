@@ -27,17 +27,23 @@
 #' @references \href{https://www.fhwa.dot.gov/bridge/nbi/ascii.cfm}{NBI ASCII data}
 #' @references \href{https://www.fhwa.dot.gov/bridge/mtguide.pdf}{NBI Recording and Coding Guide}
 
+convert2016 <- function(filePath=NULL) {
 
 # ----- Ingest --------------------------------------------------------------
-filePath1 <- "S:/AdminGroups/PerformanceProgramming/RegionalTransportationPerformanceMeasures/Bridge_Analysis/NBI/Data/2016hwybronlyonefile.zip"
-
+##filePath1 <- "~/R/NBI/Data/2016hwybronlyonefile.zip"
+#filePath <-  "~/R/NBI/Data/nbiIL.rds"
+  filePath2 <-  "~/R/NBI/Data/nbiIL.RDS"
+  rawDF <- readRDS(filePath2)
+  
 # Read everything in as character data to avoid any 'problems(...)'
-col_types <- paste0(rep('c',135),collapse='')
-rawDF <- readr::read_csv(filePath1, col_types=col_types)
+##col_types <- paste0(rep('c',135),collapse='')
+##rawDF <- readr::read_csv(filePath1, col_types=col_types)
+#rawDF <- readRDS(filePath)
+
 
 # Create a minimal nbi 'tibble' that has the proper number of rows
 nbi <- rawDF[,'STATE_CODE_001']
-
+nbi <-as.list(nbi)
 # ----- stateCode -------------------------------------------------------------
 
 # From the coding guide:
@@ -143,7 +149,9 @@ latDMS[badMask] <- NA
 # > rug(as.numeric(latDMS))
 
 # ----- Deal with high latitudes
-highLatMask <- !is.na(latDMS) & as.numeric(latDMS) > 7.5e7
+##highLatMask <- !is.na(latDMS) & as.numeric(latDMS) > 7.5e7
+
+
 
 # > which(highLatMask)
 # [1]  15576  15873  29670 235524 238471 239296 239303 239683 240069 354266 467616
@@ -175,7 +183,7 @@ latDMS[c(235524, 238471, 239303, 240069)] <- NA
 lonDMS[c(235524, 238471, 239303, 240069)] <- NA
 
 # ----- Deal with low latitudes
-lowLatMask <- !is.na(latDMS) & as.numeric(latDMS) < 1e7
+##lowLatMask <- !is.na(latDMS) & as.numeric(latDMS) < 1e7
 
 # > hist(as.numeric(latDMS[lowLatMask]), n=100, xlim=c(0,1e7))
 # > rug(as.numeric(latDMS[lowLatMask]))
@@ -206,7 +214,7 @@ lowLatMask <- !is.na(latDMS) & as.numeric(latDMS) < 1e7
 # Again, a variety of bugs but one of the more common problems, especially with Maryland
 # is that they added "00" to the *beginning* of the lat/lon strings rather than at the end.
 
-mLowLatMask <- !is.na(latDMS) & as.numeric(latDMS) <1e7 & as.numeric(latDMS) > 1e6
+##mLowLatMask <- !is.na(latDMS) & as.numeric(latDMS) <1e7 & as.numeric(latDMS) > 1e6
 
 # cbind(nbi[mlowLatMask,],latitudes=latDMS[mlowLatMask],longitudes=lonDMS[mlowLatMask],nrow=which(mlowLatMask))
 # stateCode latitudes longitudes   nrow
@@ -223,9 +231,9 @@ mLowLatMask <- !is.na(latDMS) & as.numeric(latDMS) <1e7 & as.numeric(latDMS) > 1
 # ...
 # For lats between 1e6 and 1e7, it appears that the leading 0 should be at the end.
 
-latDMS[mLowLatMask] <- ifelse(stringr::str_length(latDMS[mLowLatMask]) == 8, 
-                              paste0(stringr::str_sub(latDMS[mLowLatMask],2,8),0),
-                              paste0(latDMS[mLowLatMask],0))
+##latDMS[mLowLatMask] <- ifelse(stringr::str_length(latDMS[mLowLatMask]) == 8, 
+  ##                            paste0(stringr::str_sub(latDMS[mLowLatMask],2,8),0),
+    ##                          paste0(latDMS[mLowLatMask],0))
 
 # > newLowLatMask <- !is.na(latDMS) & as.numeric(latDMS) < 1e7
 # > table(nbi$stateCode[newLowLatMask])
@@ -256,11 +264,12 @@ latDMS[c(77838, 312113)] <- paste0(stringr::str_sub(latDMS[c(77838, 312113)],3,8
 
 
 # Move two leading 0s to end
-newLowLatMask <- !is.na(latDMS) & as.numeric(latDMS) < 1e6 & as.numeric(latDMS) >1e5
-latDMS[newLowLatMask] <- paste0(stringr::str_sub(latDMS[newLowLatMask],3,8), "00")
+##newLowLatMask <- !is.na(latDMS) & as.numeric(latDMS) < 1e6 & as.numeric(latDMS) >1e5
+##latDMS[newLowLatMask] <- paste0(stringr::str_sub(latDMS[newLowLatMask],3,8), "00")
+
 
 # Fix remaining issues
-newLowLatMask <- !is.na(latDMS) & as.numeric(latDMS) < 1e7
+##newLowLatMask <- !is.na(latDMS) & as.numeric(latDMS) < 1e7
 # cbind(nbi[newLowLatMask,],latitudes=latDMS[newLowLatMask],longitudes=lonDMS[newLowLatMask],nrow=which(newLowLatMask))
 # stateCode latitudes longitudes   nrow
 # 1         MD  00039007  000076297 235749
@@ -291,7 +300,7 @@ newLowLatMask <- !is.na(latDMS) & as.numeric(latDMS) < 1e7
 # most can be fixed by moving 3 leading 0s to end. 237803 also has lat/lon confused.
 latDMS[237803] <- stringr::str_sub(rawDF$LONG_017[237803],2,9)
 lonDMS[237803] <- paste0("0",rawDF$LAT_016[237803])
-latDMS[newLowLatMask] <- paste0(stringr::str_sub(latDMS[newLowLatMask],4,8),"000")
+##latDMS[newLowLatMask] <- paste0(stringr::str_sub(latDMS[newLowLatMask],4,8),"000")
 
 
 
@@ -628,7 +637,11 @@ nbi$waterwayAdequacy <- as.numeric(nbi$Waterway)
 nbi$Waterway <- NULL
 #------------------------------------------------------------------------------
 # #---------Condition------------------------------------------------------------
+nbi$length <- rawDF$STRUCTURE_LEN_MT_049
+nbi$deckWidth <- rawDF$DECK_WIDTH_MT_052
+nbi$areaFT <- (rawDF$STRUCTURE_LEN_MT_049 * 3.2808)* (rawDF$DECK_WIDTH_MT_052 *3.2808)
 
+nbi$suff_rate <- rawDF$SUFFICIENCY_RATING
 #------------------------------------------------------------------------------
 # #---------laneCount------------------------------------------------------------
 # # There are so many data points that are apparently totally wrong that this variable may not be usable.
@@ -659,3 +672,4 @@ nbi$channelCondition <- as.numeric(rawDF$CHANNEL_COND_061)
 
 return(nbi)
 
+}
