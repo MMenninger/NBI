@@ -3,6 +3,9 @@ convert2016 <- function(filePath=NULL) {
   # Import the file ----
 # filePath <-  "~/R/NBI/Data/nbiIL.RDS"
   rawDF <- readRDS(filePath)
+  
+  library(readr)
+  Owner_code <- read_csv("~/R/NBI/Data/Owner_code.csv")
 
 #Build NBI file ----
   nbi <- rawDF %>%
@@ -15,7 +18,10 @@ convert2016 <- function(filePath=NULL) {
     mutate(county_code = as.integer(paste(state_code, COUNTY_CODE_003, sep = ""))) %>%  ##Format for Join
     left_join(maps::county.fips, by = c("county_code" = "fips")) %>% ## Join in the County 
     mutate(water = ifelse(WATERWAY_EVAL_071 == "N", 0, 1)) %>%
-    mutate(yearBuilt = as.numeric(YEAR_BUILT_027))
+    mutate(yearBuilt = as.numeric(YEAR_BUILT_027)) %>%
+    left_join(Owner_code, by = c("OWNER_022" = "Code"))
+  
+  nbi$ADT_029 <- as.numeric(nbi$ADT_029)
   
 #Latitude----  
   deg <- as.numeric(stringr::str_sub(nbi$LAT_016, 1, 2))
@@ -29,7 +35,7 @@ convert2016 <- function(filePath=NULL) {
   sec <- as.numeric(stringr::str_sub(nbi$LONG_017, 6, 9))/100
   
   nbi$longitude <- -1 * (deg + min/60 + sec/3600)
-
+  
   return(nbi)
   
   }

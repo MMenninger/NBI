@@ -34,7 +34,7 @@ coordinates(nbisp) <- c("longitude", "latitude")
 proj4string(nbisp) <- proj4string(USCensusStates)
 #il <- subset(nbisp, state_code == "17")
 ilCounties <- subset(USCensusCounties, stateCode == "IL")
-#il$county <- getUSCounty(il$longitude, il$latitude, dataset = "ilCounties", stateCode = "IL")
+nbi$county <- getUSCounty(nbi$longitude, nbi$latitude, dataset = "ilCounties", stateCode = "IL")
 ```
 
  What is so unique about Illinois?
@@ -93,7 +93,7 @@ ggplot(nbi,  aes(x=yearBuilt))+
   scale_x_continuous(breaks = seq(1870, 2020, 20), limits = c(1870, 2020))+
   labs(x= "Year Built", y= "Number of Bridges", title= "Year Illinois Bridges Built")
 
-ggplot(nbi,  aes(x=yearBuilt, fill = OWNER_022))+
+ggplot(nbi,  aes(x=yearBuilt, fill = Description))+
   geom_bar(position = "stack", show.legend = TRUE) +
   scale_x_continuous(breaks = seq(1800, 2020, 20), limits = c(1880, 2020))+
   labs(x= "Year Built", y= "Number of Bridges", title= "Year All Illinois Bridges Built")
@@ -107,7 +107,7 @@ ggplot(aes(x=yearBuilt, fill = OWNER_022))+
 
 nbi %>%
   filter(OWNER_022 == "01") %>%
-ggplot(aes(x=yearBuilt, fill = OWNER_022))+
+ggplot(aes(x=yearBuilt, fill = Description))+
   geom_bar(position = "stack", show.legend = FALSE) +
   scale_x_continuous(breaks = seq(1800, 2020, 20), limits = c(1880, 2020))+
   labs(x= "Year Built", y= "Number of Bridges", title= "Year State Bridges Built")
@@ -166,15 +166,15 @@ knitr::include_graphics(c("./localImages/bridge1.jpg","./localImages/WebberBridg
 With so many bridges destroyed, we would expect that just as many bridges had to be rebuilt. Thus, is the huge spike in bridge building in 1935 a sign of enthusiastic expansion of road networks, an indication of the aftermath of a natural disaster which destroyed many bridges, or simply an artifact of human fallibility in recording data? Let's take a closer look at the bridges built in 1935.  
   
 ```{r floodBridges}
-floodBridges <- subset(il, yearBuilt == 1935)
+floodBridges <- subset(nbi, yearBuilt == 1935)
 ```
 
   
 According to our dataset, `r nrow(floodBridges)` were built in 1935. That's a lot. 307 highway bridges were reportedly destroyed in the flood, and, we expect, rebuilt shortly thereafter. This does not account for railroad bridges or bridges on small county roads, so it is fair to expect the total number of reconstructed bridges to be significantly higher than 307. Is it plausible that the vast majority of bridges built in 1935 were non-highway bridges destroyed in the flood? They do seem to be primarily non-highway bridges. The average daily traffic for bridges built in 1935 is `r mean(floodBridges$averageCarCount)` vehicles whereas the average daily traffic for all Nebraskan bridges is `r mean(il$averageCarCount)` vehicles. The vast majority of the bridges built in 1935 carry 100 cars or fewer. In fact, only 11% of the bridges built in 1935 carry over 100 cars per day, on average, which indicates that they are generally small, non-highway bridges, the kind that would easily get washed out in a flood. However, it is also likely that most large bridges were built more recently, once major highways were developed.
 
 ```{r traffic1935, fig.width=7}
-hist(floodBridges$averageCarCount, n = 100000, main = "Traffic on Bridges Built in 1935", xlab = "Average Daily Traffic")
-hist(floodBridges$averageCarCount, n = 100000, xlim = c(0,500), main = "Zoomed-in Histogram of Traffic on Bridges Built in 1935", xlab = "Average Daily Traffic")
+hist(floodBridges$ADT_029, n = 100000, main = "Traffic on Bridges Built in 1935", xlab = "Average Daily Traffic")
+hist(floodBridges$ADT_029, n = 100000, xlim = c(0,500), main = "Zoomed-in Histogram of Traffic on Bridges Built in 1935", xlab = "Average Daily Traffic")
 ```
 
 
@@ -226,7 +226,7 @@ points(subset(il, water == 0), cex = .5, pch = 17, col = ilColors[colorIndex])
 par(mar = c(4,0,4,0))
 layout(matrix(c(2,1),1,2), widths = c(2,8))
 plot(subset(USCensusStates, stateCode == "IL"))
-points(il, pch = 2, cex = il$averageCarCount/80000)
+points(nbi, pch = 2, cex = nbi$ADT_029/80000)
 title("Traffic on Illinois's Bridges")
 plot.new()
 legend("left", c("1,000", "10,000", "100,000"), pch = 2, pt.cex = c(1000/20000, 10000/20000, 100000/20000), title = "Daily motor Traffic", y.intersp = 2)
@@ -307,7 +307,7 @@ uniqv <- unique(v)
 uniqv[which.max(tabulate(match(v, uniqv)))]
 }
 
-modeYearByCounty <- aggregate(data = il, yearBuilt~county, FUN = getmode)
+modeYearByCounty <- aggregate(data = nbi, yearBuilt~county, FUN = getmode)
 hist(modeYearByCounty$yearBuilt)
 breaks <- c(seq(1929, 1999, by = 10), 2017)
 modeIndex <- .bincode(modeYearByCounty$yearBuilt, breaks = breaks)
