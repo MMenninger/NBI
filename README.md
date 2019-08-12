@@ -18,11 +18,7 @@ The [National Bridge Inventory](https://www.fhwa.dot.gov/bridge/nbi.cfm) is desc
 
 ASCII data files are available at [https://www.fhwa.dot.gov/bridge/nbi/ascii.cfm](https://www.fhwa.dot.gov/bridge/nbi/ascii.cfm).
 
-The **NBI** R package is being developed to clean up NBI data and make it easier to perform analyses and generate reports. It includes functionality to:
-
- * clean up and convert raw NBI data into a .RData file containing a single dataframe
-
 
 ----
 
-This project was adapted from Mazama Science. Supported by CMAP. 
+This project was adapted from Mazama Science by CMAP. 
