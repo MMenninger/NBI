@@ -1,0 +1,180 @@
+---
+title: "NBI_report"
+author: "Martin Menninger"
+date: "8/16/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(readr)
+library(measurements)
+
+setwd("~/R/NBI/Full_Run")
+```
+
+## Download the data
+
+This chunk downloads the data that you need to run the rest of the report. You should only need to run it once. 
+
+```{r download_data, eval=FALSE, include = FALSE}
+library(tidyverse)
+library(readr)
+library(measurements)
+
+##Define years and state you want ############## User Input Here ############
+years <- 1992:2018 ##NOTE: Available back to 1992##
+state <- "IL"
+
+# Download all the text files for those years
+download.file(url = paste("https://www.fhwa.dot.gov/bridge/nbi/", years, "/", state, substring(years, 3), ".txt", sep = ""), 
+              destfile = paste("NBI", state, years, ".txt", sep = ""), method = "libcurl")
+
+```
+
+
+## Import the data
+
+```{r Import into R, include = FALSE, warning=FALSE}
+years <- 1992:2018
+state <- "IL"
+
+Format <- read_csv("~/R/NBI/Inputs/Format.csv")
+fcol_types <- paste0(rep(Format$Same), collapse = "")
+
+##Needed to set up loop. Should rewrite to eliminate need for this. 
+NBIAll<- data.frame(read_fwf(file = paste("NBI", state, "2018", ".txt", sep = ""), 
+                           fwf_widths(Format$ITEM_LENGTH, Format$Column_Name), 
+                           col_types = fcol_types))
+NBIAll$NBI_Year = 2018 #add a column that indicates inventory year
+
+for (i in years){
+  NBIAll <- filter(NBIAll, NBIAll$NBI_Year != i) #cleares out old data
+  temp <- read_fwf( file = paste("NBI", state, i, ".txt", sep = ""),
+                    fwf_widths(Format$ITEM_LENGTH, Format$Column_Name), 
+                    col_types = fcol_types)
+
+  temp$NBI_Year = i #add a column that indicates inventory year
+  print(i)
+  print(Sys.time())
+  NBIAll <- bind_rows(NBIAll, temp)
+}
+
+rm(Format)
+rm(i, fcol_types, years, state)
+#saveRDS(NBIAll, file = "nbiIL92_18.RDS")
+
+```
+
+## Clean Up the Data
+
+```{r clean_data, include = FALSE}
+library(readr)
+  Owner_code <- read_csv("~/R/NBI/Inputs/Owner_code.csv")
+  condition_levels <- factor( levels = c("Good", "Fair", "Poor"), ordered = TRUE)
+
+  
+#Build NBI file ----
+  nbi_trend <- NBIAll %>%
+    filter(RECORD_TYPE_005A =="1") %>%
+    select(STATE_CODE_001, COUNTY_CODE_003, LAT_016, LONG_017, WATERWAY_EVAL_071, HIGHWAY_SYSTEM_104, ## Location
+           APPR_WIDTH_MT_032, STRUCTURE_LEN_MT_049, DECK_WIDTH_MT_052,   ##Size
+           DECK_COND_058, SUPERSTRUCTURE_COND_059, SUBSTRUCTURE_COND_060, CULVERT_COND_062,  ## Condition
+           OWNER_022, FUNCTIONAL_CLASS_026, YEAR_BUILT_027, ADT_029, SUFFICIENCY_RATING, CAT10, NBI_Year) %>%
+    left_join(maps::state.fips, by = c("STATE_CODE_001" = "fips")) %>% ## Join in the State
+    mutate(county_code = as.integer(paste(STATE_CODE_001, COUNTY_CODE_003, sep = ""))) %>%  ##Format for Join
+    left_join(maps::county.fips, by = c("county_code" = "fips")) %>% ## Join in the County 
+    mutate(water = ifelse(WATERWAY_EVAL_071 == "N", 0, 1)) %>%
+    mutate(age = 2019 - YEAR_BUILT_027) %>%
+    left_join(Owner_code, by = c("OWNER_022" = "Code")) %>%
+    #mutate(CAT10 = fct_recode(CAT10, "Good" = "G","Fair" = "F","Poor" = "P")) %>%
+    mutate(    area_m = ifelse(DECK_WIDTH_MT_052 > 0, 
+                               STRUCTURE_LEN_MT_049 *DECK_WIDTH_MT_052, STRUCTURE_LEN_MT_049 *APPR_WIDTH_MT_032), 
+               min_con = pmin(DECK_COND_058,SUPERSTRUCTURE_COND_059, 
+                              SUBSTRUCTURE_COND_060, CULVERT_COND_062, na.rm = TRUE), 
+               Rating = ifelse(min_con<=4, "Poor", ifelse(min_con>=7, "Good", "Fair")))
+
+#nbi_trend$Rating <- factor(nbi_trend$Rating, levels = condition_levels)  
+nbi_trend$Rating <- factor(nbi_trend$Rating, levels = c("Good", "Fair", "Poor"))
+
+#Latitude----  
+  deg <- as.numeric(stringr::str_sub(nbi_trend$LAT_016, 1, 2))
+  min <- as.numeric(stringr::str_sub(nbi_trend$LAT_016, 3, 4))
+  sec <- as.numeric(stringr::str_sub(nbi_trend$LAT_016, 5, 8))/100
+  nbi_trend$latitude <- deg + min/60 + sec/3600
+  
+#Longitude----
+  deg <- as.numeric(stringr::str_sub(nbi_trend$LONG_017, 1, 3))
+  min <- as.numeric(stringr::str_sub(nbi_trend$LONG_017, 4, 5))
+  sec <- as.numeric(stringr::str_sub(nbi_trend$LONG_017, 6, 9))/100
+  
+  nbi_trend$longitude <- -1 * (deg + min/60 + sec/3600)
+ 
+  nbi <- nbi_trend %>% filter(NBI_Year == max(nbi_trend$NBI_Year))
+  
+   nbi <- nbi %>%
+    filter(longitude > -92) %>%
+    filter(latitude > 36) %>%
+    filter(latitude < 50)
+
+rm(condition_levels, deg, min, sec) 
+rm(Owner_code)
+#rm(NBIAll)
+rm(temp)
+
+```
+
+## Add geography information for summary
+
+```{r Add Geography}
+library(sf)
+library(sp)
+#change this to download from web --> https://datahub.cmap.illinois.gov/dataset/a466a0bf-3c3e-48cb-8297-6eb55f49fb50/resource/cbe742e0-2e78-4a54-95c2-d694703e1ae6/download/CoMCMAP201303.zip
+COM <- st_read("~/R/NBI/Inputs/CoM_CMAP_201303.shp", stringsAsFactors = FALSE)    #Local Council of Mayors
+#plot(COM)
+
+
+#Make the NBI spatial
+nbisp <- subset(nbi_trend, is.na(latitude) == F)
+nbisp <- subset(nbisp, is.na(longitude) == F)
+#nbisp<- filter(nbisp, COUNTY_CODE_003 == "031" )
+#coordinates(nbisp) <- c("longitude", "latitude")
+nbisp<- st_as_sf(nbisp, coords = c("longitude", "latitude"))
+nbisp <-st_set_crs(nbisp,  "+proj=longlat +ellps=GRS80 +datum=NAD83 +no_defs")
+#nbisp<- st_as_sf(nbisp)
+nbisp<- st_transform(nbisp, st_crs(COM))
+z <- st_join(nbisp, COM)
+
+
+#plot(subset(z, z$Council=="City of Chicago"))
+
+
+
+
+```
+
+```{r Council_Chart, fig.width = 8, fig.height=20}
+  z %>%
+  filter(HIGHWAY_SYSTEM_104 == 1) %>%
+  #filter(COUNTY_CODE_003 %in% c("031", "043", "089", "093", "097", "111", "197")) %>%
+  filter(Rating != "NA") %>%
+  group_by(NBI_Year, Rating, Council) %>%
+  summarise(countt = n(), area = sum(area_m)) %>%
+  group_by(NBI_Year, Council) %>%
+  mutate(pct = area/sum(area)) %>%
+  filter(Council != "NA") %>%
+  
+  ggplot( aes(x= NBI_Year, y = pct*100, fill = Rating)) + 
+  geom_bar(stat = "identity") +
+  #geom_text(aes(label = paste(format(pct*100, digits = 1), "%")),
+  geom_text(aes(label = paste(round(pct*100, digits = 1), "%", sep = "")), 
+            position = position_stack(vjust = 0.5), size = 3, angle = 90) +
+  scale_x_continuous(breaks = seq(1992, 2018, 2), limits = c(1990, 2020))+
+    scale_fill_brewer(type = "seq", palette="Spectral", direction = -1) +
+  facet_grid(rows = vars(Council)) +
+  #facet_wrap(~Council) +
+  #coord_flip() +
+  labs(x= "Year", y= "Percent of Bridges", title= "Percent of CMAP NHS Bridges Area By Condition") 
+
+```
+
