@@ -58,10 +58,10 @@ for (i in years){
   print(i)
   print(Sys.time())
   NBIAll <- bind_rows(NBIAll, temp)
-}
+  }
 
 rm(Format)
-rm(i, fcol_types, years, state)
+rm(i, fcol_types, years, state, temp)
 #saveRDS(NBIAll, file = "nbiIL92_18.RDS")
 
 ```
@@ -143,7 +143,7 @@ nbisp<- st_as_sf(nbisp, coords = c("longitude", "latitude"))
 nbisp <-st_set_crs(nbisp,  "+proj=longlat +ellps=GRS80 +datum=NAD83 +no_defs")
 #nbisp<- st_as_sf(nbisp)
 nbisp<- st_transform(nbisp, st_crs(COM))
-z <- st_join(nbisp, COM)
+nbisp <- st_join(nbisp, COM)
 
 
 #plot(subset(z, z$Council=="City of Chicago"))
@@ -153,8 +153,71 @@ z <- st_join(nbisp, COM)
 
 ```
 
+
+```{r State_NHS trend}
+nbi_trend %>% 
+  filter(HIGHWAY_SYSTEM_104 == 1) %>%
+  filter(Rating != "NA") %>%
+  group_by(NBI_Year, Rating) %>%
+  summarise(countt = n(), area = sum(area_m)) %>%
+  mutate(pct = area/sum(area)) %>%
+  ggplot(aes(x= NBI_Year, y = pct*100, fill = Rating)) + 
+  geom_bar(stat = "identity") +
+  #geom_text(aes(label = paste(format(pct*100, digits = 1), "%")),
+  geom_text(aes(label = paste(round(pct*100, digits = 1), "%", sep = "")), 
+            position = position_stack(vjust = 0.5), size = 3, angle = 90) +
+  scale_x_continuous(breaks = seq(1992, 2018, 2), limits = c(1990, 2020))+
+  scale_fill_brewer(type = "seq", palette="Spectral", direction = -1) +
+  #coord_flip() +
+  labs(x= "Year", y= "Percent of Bridges", title= "Percent of IL NHS Bridges Area By Condition") 
+```
+```{r State_non-NHS_trend}
+nbi_trend %>% 
+  filter(HIGHWAY_SYSTEM_104 == 0) %>%
+  filter(Rating != "NA") %>%
+  group_by(NBI_Year, Rating) %>%
+  summarise(countt = n(), area = sum(area_m)) %>%
+  mutate(pct = area/sum(area)) %>%
+  ggplot(aes(x= NBI_Year, y = pct*100, fill = Rating)) + 
+  geom_bar(stat = "identity") +
+  #geom_text(aes(label = paste(format(pct*100, digits = 1), "%")),
+  geom_text(aes(label = paste(round(pct*100, digits = 1), "%", sep = "")), 
+            position = position_stack(vjust = 0.5), size = 3, angle = 90) +
+  scale_x_continuous(breaks = seq(1992, 2018, 2), limits = c(1990, 2020))+
+  scale_fill_brewer(type = "seq", palette="Spectral", direction = -1) +
+  #coord_flip() +
+  labs(x= "Year", y= "Percent of Bridges", title= "Percent of IL non-NHS Bridges Area By Condition") 
+```
+
+```{r CMAP_NHS_Trend}
+  nbisp %>%
+  filter(HIGHWAY_SYSTEM_104 == 1) %>%
+  #filter(COUNTY_CODE_003 %in% c("031", "043", "089", "093", "097", "111", "197")) %>%
+  #filter(Rating != "NA") %>%
+  filter(Council != "NA") %>%
+  group_by(NBI_Year, Rating) %>%
+  summarise(countt = n(), area = sum(area_m)) %>%
+  #group_by(NBI_Year, Council) %>%
+  mutate(pct = area/sum(area)) %>%
+  
+  
+  ggplot( aes(x= NBI_Year, y = pct*100, fill = Rating)) + 
+  geom_bar(stat = "identity") +
+  #geom_text(aes(label = paste(format(pct*100, digits = 1), "%")),
+  geom_text(aes(label = paste(round(pct*100, digits = 1), "%", sep = "")), 
+            position = position_stack(vjust = 0.5), size = 3, angle = 90) +
+  scale_x_continuous(breaks = seq(1992, 2018, 2), limits = c(1990, 2020))+
+    scale_fill_brewer(type = "seq", palette="Spectral", direction = -1) +
+  #facet_grid(rows = vars(Council)) +
+  #facet_wrap(~Council) +
+  #coord_flip() +
+  labs(x= "Year", y= "Percent of Bridges", title= "Percent of CMAP NHS Bridges Area By Condition")
+
+```
+
+
 ```{r Council_Chart, fig.width = 8, fig.height=20}
-  z %>%
+  nbisp %>%
   filter(HIGHWAY_SYSTEM_104 == 1) %>%
   #filter(COUNTY_CODE_003 %in% c("031", "043", "089", "093", "097", "111", "197")) %>%
   filter(Rating != "NA") %>%
@@ -168,7 +231,7 @@ z <- st_join(nbisp, COM)
   geom_bar(stat = "identity") +
   #geom_text(aes(label = paste(format(pct*100, digits = 1), "%")),
   geom_text(aes(label = paste(round(pct*100, digits = 1), "%", sep = "")), 
-            position = position_stack(vjust = 0.5), size = 3, angle = 90) +
+            position = position_stack(vjust = 0.5), size = 2.5) +
   scale_x_continuous(breaks = seq(1992, 2018, 2), limits = c(1990, 2020))+
     scale_fill_brewer(type = "seq", palette="Spectral", direction = -1) +
   facet_grid(rows = vars(Council)) +
@@ -177,4 +240,3 @@ z <- st_join(nbisp, COM)
   labs(x= "Year", y= "Percent of Bridges", title= "Percent of CMAP NHS Bridges Area By Condition") 
 
 ```
-
